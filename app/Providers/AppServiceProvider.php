@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Listeners\LogOtpMailSent;
+use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Listen for mail sent events and log OTP messages
+        \Illuminate\Support\Facades\Event::listen(
+            MessageSent::class,
+            LogOtpMailSent::class
+        );
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\api;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
@@ -10,7 +10,7 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::with('children')->whereNull('parent_id')->get();
+        $categories = Category::get();
         return response()->json($categories);
     }
 
@@ -19,4 +19,5 @@ class CategoryController extends Controller
         $products = $category->products()->with('brand')->paginate(20);
         return response()->json($products);
     }
+
 }

@@ -14,14 +14,12 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->integer('rating'); // 1-5 তারকা
+            $table->integer('rating');
             $table->string('title')->nullable();
             $table->text('comment')->nullable();
-            $table->boolean('is_approved')->default(false); // মডারেশনের জন্য
-            $table->text('admin_reply')->nullable(); // এডমিনের রিপ্লাই
+            $table->boolean('is_approved')->default(false);
+            $table->text('admin_reply')->nullable();
             $table->timestamps();
-
-            // একজন ইউজার একটি প্রোডাক্টে একবারই রিভিউ দিতে পারবে
             $table->unique(['user_id', 'product_id']);
 
         });
