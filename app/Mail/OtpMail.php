@@ -19,10 +19,10 @@ class OtpMail extends Mailable
      * Create a new message instance.
      */
 
-    public $otp;
-    public $userName;
+    public string|int $otp;
+    public ?string $userName;
 
-    public function __construct($otp, $userName = null)
+    public function __construct(string|int $otp, ?string $userName = null)
     {
         $this->otp = $otp;
         $this->userName = $userName;

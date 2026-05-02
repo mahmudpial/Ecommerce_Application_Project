@@ -17,6 +17,7 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->group(function () {
 
+    // Authentication
     Route::post('send-otp', [AuthController::class, 'sendOtp']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 
@@ -35,14 +36,14 @@ Route::prefix('v1')->group(function () {
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}/products', [CategoryController::class, 'products']);
 
-
+    // Wishlist
     Route::get('wishlist', [WishlistController::class, 'index']);
     Route::post('wishlist/add', [WishlistController::class, 'add']);
     Route::delete('wishlist/remove/{productId}', [WishlistController::class, 'remove']);
     Route::get('wishlist/check/{productId}', [WishlistController::class, 'check']);
 
 
-
+    // Reviews
     Route::get('reviews', [ReviewController::class, 'index']);
     Route::post('reviews', [ReviewController::class, 'store']);
     Route::get('my-reviews', [ReviewController::class, 'myReviews']);
@@ -59,5 +60,15 @@ Route::prefix('v1')->group(function () {
     Route::post('sslcommerz/cancel', [PaymentController::class, 'paymentCancel'])->name('sslc.cancel');
     Route::post('sslcommerz/ipn', [PaymentController::class, 'paymentIpn'])->name('sslc.ipn');
 
+
+
+    //admin products
+    Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+        Route::get('products', [ProductController::class, 'index']);
+        Route::post('products', [ProductController::class, 'store']);
+        Route::get('products/{product}', [ProductController::class, 'show']);
+        Route::put('products/{product}', [ProductController::class, 'update']);
+        Route::delete('products/{product}', [ProductController::class, 'destroy']);
+    });
 
 });

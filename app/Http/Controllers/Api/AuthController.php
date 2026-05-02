@@ -29,7 +29,7 @@ class AuthController extends Controller
             'user_id' => $user->id,
             'user_name' => $user->name,
             'otp' => $otp,
-            'expires_in_minutes' => 5,
+            'expires_in_minutes' => 1,
             'created_at' => now()->format('Y-m-d H:i:s'),
         ]);
 
