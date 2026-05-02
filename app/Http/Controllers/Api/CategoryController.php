@@ -3,21 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\CategoryResource;
+use App\Http\Resources\Api\ProductResource;
 use App\Models\Category;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::get();
-        return response()->json($categories);
+        $categories = Category::where('is_active', true)->get();
+        return CategoryResource::collection($categories);
     }
 
     public function products(Category $category)
     {
         $products = $category->products()->with('brand')->paginate(20);
-        return response()->json($products);
+        return ProductResource::collection($products);
     }
 
 }

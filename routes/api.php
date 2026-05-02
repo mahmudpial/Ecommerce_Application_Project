@@ -60,13 +60,11 @@ Route::prefix('v1')->group(function () {
     Route::post('sslcommerz/cancel', [PaymentController::class, 'paymentCancel'])->name('sslc.cancel');
     Route::post('sslcommerz/ipn', [PaymentController::class, 'paymentIpn'])->name('sslc.ipn');
 
-
-
-    //admin products
+    // Admin products
     Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
-        Route::get('products', [ProductController::class, 'index']);
+        Route::get('products', [ProductController::class, 'adminIndex']);
+        Route::get('products/{product}', [ProductController::class, 'adminShow']);
         Route::post('products', [ProductController::class, 'store']);
-        Route::get('products/{product}', [ProductController::class, 'show']);
         Route::put('products/{product}', [ProductController::class, 'update']);
         Route::delete('products/{product}', [ProductController::class, 'destroy']);
     });
