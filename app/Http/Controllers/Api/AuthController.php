@@ -20,7 +20,7 @@ class AuthController extends Controller
         $user = User::where('mobile', $request->mobile)->first();
         $user->update([
             'otp' => $otp,
-            'otp_expires_at' => now()->addMinutes(5)
+            'otp_expires_at' => now()->addMinute()
         ]);
 
         // Log OTP sending
