@@ -12,7 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'mobile', 'address', 'otp', 'otp_expires_at'])]
+#[Fillable(['name', 'email', 'password', 'mobile', 'address', 'otp', 'otp_expires_at', 'role'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -41,6 +41,21 @@ class User extends Authenticatable
     public function wishlistedProducts(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'wishlists');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isModerator(): bool
+    {
+        return $this->role === 'moderator';
+    }
+
+    public function isUser(): bool
+    {
+        return $this->role === 'user';
     }
 
     public function review()

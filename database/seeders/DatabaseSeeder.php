@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             'mobile' => '01712345678',
             'email' => 'test@example.com',
             'address' => 'Dhaka, Bangladesh',
+            'role' => 'admin',
             'password' => 'password'
         ]);
 

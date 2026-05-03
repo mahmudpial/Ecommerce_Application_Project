@@ -61,7 +61,7 @@ Route::prefix('v1')->group(function () {
     Route::post('sslcommerz/ipn', [PaymentController::class, 'paymentIpn'])->name('sslc.ipn');
 
     // Admin products
-    Route::middleware('auth:sanctum')->prefix('admin')->group(function () {
+    Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
         Route::get('products', [ProductController::class, 'adminIndex']);
         Route::get('products/{product}', [ProductController::class, 'adminShow']);
         Route::post('products', [ProductController::class, 'store']);
