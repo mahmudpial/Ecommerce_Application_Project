@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\ReviewResource;
 use App\Models\Review;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class ReviewController extends Controller
     {
         $product = Product::findOrFail($productId);
 
-        $reviews = Review::with('user')
+        $reviews = Review::with(['user', 'product'])
             ->where('product_id', $productId)
             ->approved()
             ->latest()
@@ -24,7 +25,7 @@ class ReviewController extends Controller
             'average_rating' => $product->average_rating,
             'total_reviews' => $product->reviews_count,
             'rating_distribution' => $product->rating_distribution,
-            'reviews' => $reviews
+            'reviews' => ReviewResource::collection($reviews)
         ]);
     }
 
@@ -54,19 +55,19 @@ class ReviewController extends Controller
 
         return response()->json([
             'message' => 'Review submitted successfully. Waiting for approval.',
-            'review' => $review
+            'review' => new ReviewResource($review->load(['user', 'product']))
         ], 201);
     }
 
     // আমার দেওয়া রিভিউ দেখা
     public function myReviews(Request $request)
     {
-        $reviews = Review::with('product')
+        $reviews = Review::with(['product', 'user'])
             ->where('user_id', $request->user()->id)
             ->latest()
             ->paginate(10);
 
-        return response()->json($reviews);
+        return ReviewResource::collection($reviews);
     }
 
     // রিভিউ ডিলিট
@@ -79,5 +80,47 @@ class ReviewController extends Controller
         $review->delete();
 
         return response()->json(['message' => 'Review deleted successfully']);
+    }
+
+    // Pending reviews for moderation
+    public function pendingReviews()
+    {
+        $reviews = Review::with(['user', 'product'])
+            ->pending()
+            ->latest()
+            ->paginate(10);
+
+        return response()->json($reviews);
+    }
+
+    // Approve a review
+    public function approve(Review $review)
+    {
+        $review->update([
+            'is_approved' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'Review approved successfully',
+            'review' => new ReviewResource($review->fresh(['user', 'product'])),
+        ]);
+    }
+
+    // Reject a review
+    public function reject(Request $request, Review $review)
+    {
+        $validated = $request->validate([
+            'admin_reply' => 'nullable|string|max:1000',
+        ]);
+
+        $review->update([
+            'is_approved' => false,
+            'admin_reply' => $validated['admin_reply'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Review rejected successfully',
+            'review' => new ReviewResource($review->fresh(['user', 'product'])),
+        ]);
     }
 }

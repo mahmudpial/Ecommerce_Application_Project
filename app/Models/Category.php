@@ -9,12 +9,12 @@ class Category extends Model
 {
     protected $fillable = ['name', 'image', 'parent_id', 'slug', 'is_active'];
 
-    protected function parent()
+    public function parent()
     {
         return $this->belongsTo(Category::class, 'parent_id');
     }
 
-    protected function children()
+    public function children()
     {
         return $this->hasMany(Category::class, 'parent_id');
     }

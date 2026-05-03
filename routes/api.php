@@ -1,25 +1,47 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminDashboardController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ModeratorDashboardController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Resources\Api\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
-    return $request->user();
+    return new UserResource($request->user());
 })->middleware('auth:sanctum');
 
 
 Route::prefix('v1')->group(function () {
 
     // Authentication
+    Route::prefix('auth')->group(function () {
+        Route::post('register/request-otp', [AuthController::class, 'registerRequestOtp']);
+        Route::post('register/verify-otp', [AuthController::class, 'registerVerifyOtp']);
+
+        Route::post('login/request-otp', [AuthController::class, 'loginRequestOtp']);
+        Route::post('login/verify-otp', [AuthController::class, 'loginVerifyOtp']);
+
+        Route::post('forgot-password/request-otp', [AuthController::class, 'forgotPasswordRequestOtp']);
+        Route::post('forgot-password/verify-otp', [AuthController::class, 'forgotPasswordVerifyOtp']);
+        Route::post('forgot-password/reset', [AuthController::class, 'resetPassword']);
+    });
+
+    // Legacy login aliases
     Route::post('send-otp', [AuthController::class, 'sendOtp']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('profile', [ProfileController::class, 'show']);
+        Route::put('profile', [ProfileController::class, 'update']);
+    });
 
     // Products
     Route::get('products', [ProductController::class, 'index']);
@@ -62,11 +84,32 @@ Route::prefix('v1')->group(function () {
 
     // Admin products
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+        Route::get('dashboard', [AdminDashboardController::class, 'index']);
+        Route::get('brands', [BrandController::class, 'adminIndex']);
+        Route::get('brands/{brand}', [BrandController::class, 'show']);
+        Route::post('brands', [BrandController::class, 'store']);
+        Route::put('brands/{brand}', [BrandController::class, 'update']);
+        Route::delete('brands/{brand}', [BrandController::class, 'destroy']);
+
+        Route::get('categories', [CategoryController::class, 'adminIndex']);
+        Route::get('categories/{category}', [CategoryController::class, 'show']);
+        Route::post('categories', [CategoryController::class, 'store']);
+        Route::put('categories/{category}', [CategoryController::class, 'update']);
+        Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
+
         Route::get('products', [ProductController::class, 'adminIndex']);
         Route::get('products/{product}', [ProductController::class, 'adminShow']);
         Route::post('products', [ProductController::class, 'store']);
         Route::put('products/{product}', [ProductController::class, 'update']);
         Route::delete('products/{product}', [ProductController::class, 'destroy']);
+    });
+
+    // Moderator reviews
+    Route::middleware(['auth:sanctum', 'role:moderator,admin'])->prefix('moderator')->group(function () {
+        Route::get('dashboard', [ModeratorDashboardController::class, 'index']);
+        Route::get('reviews/pending', [ReviewController::class, 'pendingReviews']);
+        Route::patch('reviews/{review}/approve', [ReviewController::class, 'approve']);
+        Route::patch('reviews/{review}/reject', [ReviewController::class, 'reject']);
     });
 
 });

@@ -3,108 +3,328 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ForgotPasswordOtpRequest;
+use App\Http\Requests\Api\LoginOtpRequest;
+use App\Http\Requests\Api\RegisterOtpRequest;
+use App\Http\Requests\Api\ResetPasswordRequest;
+use App\Http\Requests\Api\VerifyOtpRequest;
+use App\Http\Resources\Api\UserResource;
 use App\Mail\OtpMail;
+use App\Models\OtpCode;
 use App\Models\User;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    // Send OTP
-    public function sendOtp(Request $request)
+    public function registerRequestOtp(RegisterOtpRequest $request)
     {
-        $request->validate(['mobile' => 'required|string|exists:users,mobile']);
+        $data = $request->validated();
+        $identifier = $this->normalizeIdentifier($data['email']);
 
-        $otp = rand(100000, 999999);
-        $user = User::where('mobile', $request->mobile)->first();
+        [$otpCode, $otp] = $this->createOtpCode(
+            OtpCode::PURPOSE_REGISTER,
+            $identifier,
+            [
+                'name' => $data['name'],
+                'email' => $this->normalizeIdentifier($data['email']),
+                'mobile' => $data['mobile'],
+                'password_hash' => Hash::make($data['password']),
+            ]
+        );
+
+        $deliveryChannel = $this->deliverOtp($otp, $data['email'], $data['name'], 'registration');
+
+        return response()->json([
+            'message' => 'Registration OTP sent successfully',
+            'purpose' => $otpCode->purpose,
+            'identifier' => $identifier,
+            'delivery_channel' => $deliveryChannel,
+            'expires_in_minutes' => 10,
+            'otp' => app()->isLocal() ? $otp : null,
+        ]);
+    }
+
+    public function registerVerifyOtp(VerifyOtpRequest $request)
+    {
+        $validated = $request->validated();
+        $identifier = $this->normalizeIdentifier($validated['identifier']);
+
+        $otpCode = $this->findValidOtpCode(
+            OtpCode::PURPOSE_REGISTER,
+            $identifier,
+            $validated['otp']
+        );
+
+        if (! $otpCode) {
+            return response()->json(['message' => 'Invalid or expired OTP'], 401);
+        }
+
+        $payload = $otpCode->payload ?? [];
+
+        DB::table('users')->insert([
+            'name' => $payload['name'],
+            'email' => $payload['email'],
+            'mobile' => $payload['mobile'],
+            'password' => $payload['password_hash'],
+            'role' => 'user',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $user = User::where('email', $payload['email'])->firstOrFail();
+
+        $otpCode->update([
+            'used_at' => now(),
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Registration successful',
+            'user' => new UserResource($user),
+            'token' => $token,
+        ], 201);
+    }
+
+    public function loginRequestOtp(LoginOtpRequest $request)
+    {
+        $validated = $request->validated();
+        $identifier = $this->normalizeIdentifier($validated['identifier']);
+        $user = $this->resolveUserByIdentifier($identifier);
+
+        if (! $user) {
+            return response()->json(['message' => 'Account not found'], 404);
+        }
+
+        [$otpCode, $otp] = $this->createOtpCode(
+            OtpCode::PURPOSE_LOGIN,
+            $identifier
+        );
+
+        $deliveryChannel = $this->deliverOtp($otp, $user->email, $user->name, $identifier);
+
+        return response()->json([
+            'message' => 'OTP sent successfully',
+            'purpose' => $otpCode->purpose,
+            'identifier' => $identifier,
+            'delivery_channel' => $deliveryChannel,
+            'expires_in_minutes' => 10,
+            'otp' => app()->isLocal() ? $otp : null,
+        ]);
+    }
+
+    public function loginVerifyOtp(VerifyOtpRequest $request)
+    {
+        $validated = $request->validated();
+        $identifier = $this->normalizeIdentifier($validated['identifier']);
+
+        $otpCode = $this->findValidOtpCode(
+            OtpCode::PURPOSE_LOGIN,
+            $identifier,
+            $validated['otp']
+        );
+
+        if (! $otpCode) {
+            return response()->json(['message' => 'Invalid or expired OTP'], 401);
+        }
+
+        $user = $this->resolveUserByIdentifier($identifier);
+
+        if (! $user) {
+            return response()->json(['message' => 'Account not found'], 404);
+        }
+
+        $otpCode->update([
+            'used_at' => now(),
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successful',
+            'user' => new UserResource($user),
+            'token' => $token,
+        ]);
+    }
+
+    public function forgotPasswordRequestOtp(ForgotPasswordOtpRequest $request)
+    {
+        $validated = $request->validated();
+        $identifier = $this->normalizeIdentifier($validated['identifier']);
+        $user = $this->resolveUserByIdentifier($identifier);
+
+        if (! $user) {
+            return response()->json(['message' => 'Account not found'], 404);
+        }
+
+        [$otpCode, $otp] = $this->createOtpCode(
+            OtpCode::PURPOSE_FORGOT_PASSWORD,
+            $identifier
+        );
+
+        $deliveryChannel = $this->deliverOtp($otp, $user->email, $user->name, $identifier);
+
+        return response()->json([
+            'message' => 'Password reset OTP sent successfully',
+            'purpose' => $otpCode->purpose,
+            'identifier' => $identifier,
+            'delivery_channel' => $deliveryChannel,
+            'expires_in_minutes' => 10,
+            'otp' => app()->isLocal() ? $otp : null,
+        ]);
+    }
+
+    public function forgotPasswordVerifyOtp(VerifyOtpRequest $request)
+    {
+        $validated = $request->validated();
+        $identifier = $this->normalizeIdentifier($validated['identifier']);
+
+        $otpCode = $this->findValidOtpCode(
+            OtpCode::PURPOSE_FORGOT_PASSWORD,
+            $identifier,
+            $validated['otp']
+        );
+
+        if (! $otpCode) {
+            return response()->json(['message' => 'Invalid or expired OTP'], 401);
+        }
+
+        $resetToken = (string) Str::uuid();
+
+        $otpCode->update([
+            'verified_at' => now(),
+            'verification_token' => $resetToken,
+        ]);
+
+        return response()->json([
+            'message' => 'OTP verified successfully',
+            'reset_token' => $resetToken,
+        ]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        $validated = $request->validated();
+
+        $otpCode = OtpCode::where('verification_token', $validated['reset_token'])
+            ->where('purpose', OtpCode::PURPOSE_FORGOT_PASSWORD)
+            ->whereNotNull('verified_at')
+            ->whereNull('used_at')
+            ->first();
+
+        if (! $otpCode) {
+            return response()->json(['message' => 'Invalid or expired reset token'], 401);
+        }
+
+        $user = $this->resolveUserByIdentifier($otpCode->identifier);
+
+        if (! $user) {
+            return response()->json(['message' => 'Account not found'], 404);
+        }
+
         $user->update([
-            'otp' => $otp,
-            'otp_expires_at' => now()->addMinute()
+            'password' => $validated['password'],
         ]);
 
-        // Log OTP sending
-        Log::info('📱 OTP Generated and Saved', [
-            'mobile' => $request->mobile,
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'otp' => $otp,
-            'expires_in_minutes' => 1,
-            'created_at' => now()->format('Y-m-d H:i:s'),
+        $otpCode->update([
+            'used_at' => now(),
         ]);
 
-        // Send OTP via email if email exists
-        if ($user->email) {
+        return response()->json([
+            'message' => 'Password reset successfully',
+        ]);
+    }
+
+    public function sendOtp(LoginOtpRequest $request)
+    {
+        return $this->loginRequestOtp($request);
+    }
+
+    public function verifyOtp(VerifyOtpRequest $request)
+    {
+        return $this->loginVerifyOtp($request);
+    }
+
+    private function createOtpCode(string $purpose, string $identifier, array $payload = []): array
+    {
+        $otp = (string) random_int(100000, 999999);
+
+        $otpCode = OtpCode::create([
+            'purpose' => $purpose,
+            'identifier' => $this->normalizeIdentifier($identifier),
+            'payload' => $payload ?: null,
+            'otp_hash' => Hash::make($otp),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        return [$otpCode, $otp];
+    }
+
+    private function deliverOtp(string $otp, ?string $email, string $userName, string $context): string
+    {
+        if ($email) {
             try {
-                Mail::to($user->email)->send(new OtpMail($otp, $user->name));
-                Log::info('✅ OTP Email Sent Successfully', [
-                    'email' => $user->email,
-                    'mobile' => $request->mobile,
-                    'otp' => $otp,
+                Mail::to($email)->send(new OtpMail($otp, $userName));
+
+                Log::info('OTP email sent', [
+                    'context' => $context,
+                    'email' => $email,
                 ]);
-            } catch (\Exception $e) {
-                Log::error('❌ Failed to Send OTP Email', [
-                    'email' => $user->email,
+
+                return 'email';
+            } catch (\Throwable $e) {
+                Log::error('Failed to send OTP email', [
+                    'context' => $context,
+                    'email' => $email,
                     'error' => $e->getMessage(),
                 ]);
             }
         }
 
-        // In real project, send SMS here
-        return response()->json(['message' => 'OTP sent successfully', 'otp' => $otp]);
-    }
-
-    // Verify OTP & Login
-    public function verifyOtp(Request $request)
-    {
-        $request->validate([
-            'mobile' => 'required|string|exists:users,mobile',
-            'otp' => 'required|string|size:6'
+        Log::info('OTP generated without email delivery', [
+            'context' => $context,
+            'otp' => $otp,
         ]);
 
-        $user = User::where('mobile', $request->mobile)
-            ->where('otp', $request->otp)
-            ->where('otp_expires_at', '>', now())
+        return 'manual';
+    }
+
+    private function findValidOtpCode(string $purpose, string $identifier, string $otp): ?OtpCode
+    {
+        $otpCode = OtpCode::where('purpose', $purpose)
+            ->where('identifier', $this->normalizeIdentifier($identifier))
+            ->whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->latest()
             ->first();
 
-        if (!$user) {
-            Log::warning('⚠️ Failed OTP Verification Attempt', [
-                'mobile' => $request->mobile,
-                'otp_provided' => $request->otp,
-                'attempted_at' => now()->format('Y-m-d H:i:s'),
-            ]);
-            return response()->json(['message' => 'Invalid or expired OTP'], 401);
+        if (! $otpCode || ! Hash::check($otp, $otpCode->otp_hash)) {
+            return null;
         }
 
-        $user->update(['otp' => null, 'otp_expires_at' => null]);
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        Log::info('✅ OTP Verification Successful', [
-            'mobile' => $request->mobile,
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'verified_at' => now()->format('Y-m-d H:i:s'),
-        ]);
-
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => $user,
-            'token' => $token
-        ]);
+        return $otpCode;
     }
 
-    // Get Profile
-    public function profile(Request $request)
+    private function resolveUserByIdentifier(string $identifier): ?User
     {
-        return response()->json($request->user());
+        $identifier = $this->normalizeIdentifier($identifier);
+
+        return User::query()
+            ->where('email', $identifier)
+            ->orWhere('mobile', $identifier)
+            ->first();
     }
 
-    // Update Profile
-    public function updateProfile(Request $request)
+    private function normalizeIdentifier(string $identifier): string
     {
-        $user = $request->user();
-        $user->update($request->only(['name', 'email', 'address']));
-        return response()->json(['message' => 'Profile updated', 'user' => $user]);
-    }
+        $identifier = trim($identifier);
 
+        return str_contains($identifier, '@')
+            ? strtolower($identifier)
+            : $identifier;
+    }
 }
