@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Resources\Api\UserResource;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,7 +43,6 @@ Route::prefix('v1')->group(function () {
 
     // -------------------------------------------------------
     // Admin OTP authentication — PUBLIC (no token exists yet)
-    //
     // Must be outside the auth:sanctum middleware group because
     // the admin has no Bearer token before they log in.
     // -------------------------------------------------------
@@ -99,25 +99,32 @@ Route::prefix('v1')->group(function () {
     // Admin — protected (token + admin role required)
     // -------------------------------------------------------
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
+        // Admin dashboard overview
         Route::get('dashboard', [AdminDashboardController::class, 'index']);
 
+        // Admin brand management
         Route::get('brands', [BrandController::class, 'adminIndex']);
         Route::get('brands/{brand}', [BrandController::class, 'show']);
         Route::post('brands', [BrandController::class, 'store']);
         Route::put('brands/{brand}', [BrandController::class, 'update']);
         Route::delete('brands/{brand}', [BrandController::class, 'destroy']);
 
+        // Admin category management
         Route::get('categories', [CategoryController::class, 'adminIndex']);
         Route::get('categories/{category}', [CategoryController::class, 'show']);
         Route::post('categories', [CategoryController::class, 'store']);
         Route::put('categories/{category}', [CategoryController::class, 'update']);
         Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
 
+        // Admin product management
         Route::get('products', [ProductController::class, 'adminIndex']);
         Route::get('products/{product}', [ProductController::class, 'adminShow']);
         Route::post('products', [ProductController::class, 'store']);
         Route::put('products/{product}', [ProductController::class, 'update']);
         Route::delete('products/{product}', [ProductController::class, 'destroy']);
+
+        // Admin user management
+        Route::get('users', [UserController::class, 'index']);
     });
 
     // -------------------------------------------------------
