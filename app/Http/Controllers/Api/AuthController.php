@@ -59,7 +59,7 @@ class AuthController extends Controller
             $validated['otp']
         );
 
-        if (! $otpCode) {
+        if (!$otpCode) {
             return response()->json(['message' => 'Invalid or expired OTP'], 401);
         }
 
@@ -96,7 +96,7 @@ class AuthController extends Controller
         $identifier = $this->normalizeIdentifier($validated['identifier']);
         $user = $this->resolveUserByIdentifier($identifier);
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Account not found'], 404);
         }
 
@@ -128,13 +128,13 @@ class AuthController extends Controller
             $validated['otp']
         );
 
-        if (! $otpCode) {
+        if (!$otpCode) {
             return response()->json(['message' => 'Invalid or expired OTP'], 401);
         }
 
         $user = $this->resolveUserByIdentifier($identifier);
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Account not found'], 404);
         }
 
@@ -157,7 +157,7 @@ class AuthController extends Controller
         $identifier = $this->normalizeIdentifier($validated['identifier']);
         $user = $this->resolveUserByIdentifier($identifier);
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Account not found'], 404);
         }
 
@@ -189,7 +189,7 @@ class AuthController extends Controller
             $validated['otp']
         );
 
-        if (! $otpCode) {
+        if (!$otpCode) {
             return response()->json(['message' => 'Invalid or expired OTP'], 401);
         }
 
@@ -216,13 +216,13 @@ class AuthController extends Controller
             ->whereNull('used_at')
             ->first();
 
-        if (! $otpCode) {
+        if (!$otpCode) {
             return response()->json(['message' => 'Invalid or expired reset token'], 401);
         }
 
         $user = $this->resolveUserByIdentifier($otpCode->identifier);
 
-        if (! $user) {
+        if (!$user) {
             return response()->json(['message' => 'Account not found'], 404);
         }
 
@@ -302,7 +302,7 @@ class AuthController extends Controller
             ->latest()
             ->first();
 
-        if (! $otpCode || ! Hash::check($otp, $otpCode->otp_hash)) {
+        if (!$otpCode || !Hash::check($otp, $otpCode->otp_hash)) {
             return null;
         }
 

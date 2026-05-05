@@ -21,7 +21,9 @@ Route::get('/user', function (Request $request) {
 
 Route::prefix('v1')->group(function () {
 
-    // Authentication
+    // -------------------------------------------------------
+    // Authentication — customer-facing flows
+    // -------------------------------------------------------
     Route::prefix('auth')->group(function () {
         Route::post('register/request-otp', [AuthController::class, 'registerRequestOtp']);
         Route::post('register/verify-otp', [AuthController::class, 'registerVerifyOtp']);
@@ -34,57 +36,71 @@ Route::prefix('v1')->group(function () {
         Route::post('forgot-password/reset', [AuthController::class, 'resetPassword']);
     });
 
-    // Legacy login aliases
+    // Legacy customer login aliases (kept for backward compat)
     Route::post('send-otp', [AuthController::class, 'sendOtp']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 
+    // -------------------------------------------------------
+    // Admin OTP authentication — PUBLIC (no token exists yet)
+    //
+    // Must be outside the auth:sanctum middleware group because
+    // the admin has no Bearer token before they log in.
+    // -------------------------------------------------------
+    Route::post('admin/send-otp', [AuthController::class, 'sendOtp']);
+    Route::post('admin/verify-otp', [AuthController::class, 'verifyOtp']);
+
+    // -------------------------------------------------------
+    // Authenticated user profile
+    // -------------------------------------------------------
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('profile', [ProfileController::class, 'show']);
         Route::put('profile', [ProfileController::class, 'update']);
     });
 
-    // Products
+    // -------------------------------------------------------
+    // Public product & catalog browsing
+    // -------------------------------------------------------
     Route::get('products', [ProductController::class, 'index']);
     Route::get('products/latest', [ProductController::class, 'latest']);
     Route::get('products/popular', [ProductController::class, 'popular']);
     Route::get('products/featured', [ProductController::class, 'featured']);
     Route::get('products/{product}', [ProductController::class, 'show']);
 
-    // Brands & Categories
     Route::get('brands', [BrandController::class, 'index']);
     Route::get('brands/{brand}/products', [BrandController::class, 'products']);
-
 
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('categories/{category}/products', [CategoryController::class, 'products']);
 
-    // Wishlist
+    // -------------------------------------------------------
+    // Wishlist & Reviews
+    // -------------------------------------------------------
     Route::get('wishlist', [WishlistController::class, 'index']);
     Route::post('wishlist/add', [WishlistController::class, 'add']);
     Route::delete('wishlist/remove/{productId}', [WishlistController::class, 'remove']);
     Route::get('wishlist/check/{productId}', [WishlistController::class, 'check']);
 
-
-    // Reviews
     Route::get('reviews', [ReviewController::class, 'index']);
     Route::post('reviews', [ReviewController::class, 'store']);
     Route::get('my-reviews', [ReviewController::class, 'myReviews']);
     Route::delete('remove', [ReviewController::class, 'remove']);
 
-
-    // payment gateway route
-
+    // -------------------------------------------------------
+    // Payment gateway
+    // -------------------------------------------------------
     Route::post('checkout', [PaymentController::class, 'checkout']);
-
 
     Route::post('sslcommerz/success', [PaymentController::class, 'paymentSuccess'])->name('sslc.success');
     Route::post('sslcommerz/failure', [PaymentController::class, 'paymentFailure'])->name('sslc.failure');
     Route::post('sslcommerz/cancel', [PaymentController::class, 'paymentCancel'])->name('sslc.cancel');
     Route::post('sslcommerz/ipn', [PaymentController::class, 'paymentIpn'])->name('sslc.ipn');
 
-    // Admin products
+    // -------------------------------------------------------
+    // Admin — protected (token + admin role required)
+    // -------------------------------------------------------
     Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
         Route::get('dashboard', [AdminDashboardController::class, 'index']);
+
         Route::get('brands', [BrandController::class, 'adminIndex']);
         Route::get('brands/{brand}', [BrandController::class, 'show']);
         Route::post('brands', [BrandController::class, 'store']);
@@ -104,7 +120,9 @@ Route::prefix('v1')->group(function () {
         Route::delete('products/{product}', [ProductController::class, 'destroy']);
     });
 
-    // Moderator reviews
+    // -------------------------------------------------------
+    // Moderator
+    // -------------------------------------------------------
     Route::middleware(['auth:sanctum', 'role:moderator,admin'])->prefix('moderator')->group(function () {
         Route::get('dashboard', [ModeratorDashboardController::class, 'index']);
         Route::get('reviews/pending', [ReviewController::class, 'pendingReviews']);
