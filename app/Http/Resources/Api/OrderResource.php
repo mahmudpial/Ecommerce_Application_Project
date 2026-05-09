@@ -17,12 +17,51 @@ class OrderResource extends JsonResource
             'customer_phone' => $this->customer_phone,
             'subtotal' => $this->subtotal,
             'shipping_cost' => $this->shipping_cost,
+            'shipping_fee' => $this->shipping_cost,
             'discount' => $this->discount,
             'total' => $this->total,
             'payment_status' => $this->payment_status,
+            'payment_method' => $this->payment_method,
+            'payment_label' => $this->resolvePaymentLabel(),
             'order_status' => $this->order_status,
+            'status' => $this->order_status,
+            'delivery_label' => $this->resolveDeliveryLabel(),
+            'shipping_address' => $this->shipping_address,
+            'address_label' => $this->shipping_address,
+            'item_count' => $this->relationLoaded('items') ? $this->items->sum('quantity') : 0,
+            'items' => $this->whenLoaded('items', fn () => OrderItemResource::collection($this->items)),
             'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
             'user' => UserResource::make($this->whenLoaded('user')),
         ];
+    }
+
+    private function resolvePaymentLabel(): string
+    {
+        return match (strtolower((string) $this->payment_method)) {
+            'bkash', 'nagad' => 'Mobile wallet',
+            'card' => 'Card payment',
+            'cod' => 'Cash on delivery',
+            default => 'Cash on delivery',
+        };
+    }
+
+    private function resolveDeliveryLabel(): string
+    {
+        $shipping = (float) $this->shipping_cost;
+
+        if ($shipping <= 0) {
+            return 'Standard delivery';
+        }
+
+        if ($shipping <= 120) {
+            return 'Standard delivery';
+        }
+
+        if ($shipping <= 220) {
+            return 'Express delivery';
+        }
+
+        return 'Same day delivery';
     }
 }

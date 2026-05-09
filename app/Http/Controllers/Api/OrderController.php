@@ -3,11 +3,43 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\OrderResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function index(Request $request)
+    {
+        $orders = $request->user()
+            ->orders()
+            ->with(['items.product'])
+            ->latest()
+            ->get();
+
+        return OrderResource::collection($orders);
+    }
+
+    public function show(Request $request, string $order)
+    {
+        $record = $request->user()
+            ->orders()
+            ->with(['items.product'])
+            ->where(function ($query) use ($order) {
+                $query->where('id', $order)
+                    ->orWhere('order_number', $order);
+            })
+            ->first();
+
+        if (! $record) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        return response()->json([
+            'order' => new OrderResource($record),
+        ]);
+    }
+
     public function adminIndex(Request $request)
     {
         $query = Order::with('user'); // eager load user for customer info

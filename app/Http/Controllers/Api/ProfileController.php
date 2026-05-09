@@ -10,7 +10,9 @@ class ProfileController extends Controller
 {
     public function show(Request $request)
     {
-        return new UserResource($request->user());
+        return new UserResource($request->user()->load([
+            'orders.items.product',
+        ]));
     }
 
     public function update(Request $request)
@@ -18,6 +20,7 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|max:255',
+            'mobile' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
         ]);
 

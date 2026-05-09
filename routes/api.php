@@ -56,6 +56,9 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('profile', [ProfileController::class, 'show']);
         Route::put('profile', [ProfileController::class, 'update']);
+        Route::post('checkout', [PaymentController::class, 'checkout']);
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{order}', [OrderController::class, 'show']);
     });
 
     // -------------------------------------------------------
@@ -89,8 +92,6 @@ Route::prefix('v1')->group(function () {
     // -------------------------------------------------------
     // Payment gateway
     // -------------------------------------------------------
-    Route::post('checkout', [PaymentController::class, 'checkout']);
-
     Route::post('sslcommerz/success', [PaymentController::class, 'paymentSuccess'])->name('sslc.success');
     Route::post('sslcommerz/failure', [PaymentController::class, 'paymentFailure'])->name('sslc.failure');
     Route::post('sslcommerz/cancel', [PaymentController::class, 'paymentCancel'])->name('sslc.cancel');
