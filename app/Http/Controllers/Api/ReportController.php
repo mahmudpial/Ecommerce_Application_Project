@@ -13,8 +13,8 @@ class ReportController extends Controller
 {
     public function sales(Request $request)
     {
-        $period = $request->get('period', 'daily'); // daily, monthly, yearly
-        $date = $request->get('date', now()->toDateString());
+        $period = $request->input('period', 'daily'); // daily, monthly, yearly
+        $date = $request->input('date', now()->toDateString());
 
         $query = Order::query();
 
@@ -59,9 +59,9 @@ class ReportController extends Controller
 
     public function products(Request $request)
     {
-        $limit = $request->get('limit', 10);
-        $topProducts = Product::withCount('orderItems')
-            ->withSum('orderItems', 'price')
+        $limit = $request->input('limit', 10);
+        $topProducts = Product::withCount('items')
+            ->withSum('items', 'price')
             ->orderByDesc('order_items_sum_price')
             ->limit($limit)
             ->get()
@@ -93,7 +93,7 @@ class ReportController extends Controller
 
     public function orders(Request $request)
     {
-        $status = $request->get('status');
+        $status = $request->input('status');
         $query = Order::with('user');
         if ($status)
             $query->where('order_status', $status);

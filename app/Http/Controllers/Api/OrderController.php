@@ -47,7 +47,7 @@ class OrderController extends Controller
 
         // Search by order number, customer info, phone, or transaction ID
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
                     ->orWhere('order_number', 'like', "%{$search}%")
@@ -98,10 +98,10 @@ class OrderController extends Controller
     public function generateInvoice(Order $order)
     {
         $order->load(['user', 'items.product']);
-
-        $subtotal = $order->items->sum(function ($item) {
-            return $item->price * $item->quantity;
-        });
+        $subtotal = 0;
+        foreach ($order->items as $item) {
+            $subtotal += $item->price * $item->quantity;
+        }
         $shippingCost = $order->shipping_cost ?? 0;
         $discount = $order->discount ?? 0;
         $tax = $order->tax ?? 0;
