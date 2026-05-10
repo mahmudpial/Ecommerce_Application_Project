@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\WishlistController;
 use App\Http\Resources\Api\UserResource;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
