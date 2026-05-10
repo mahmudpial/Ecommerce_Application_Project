@@ -131,6 +131,16 @@ Route::prefix('v1')->group(function () {
         Route::get('orders', [OrderController::class, 'adminIndex']);
         Route::get('orders/{order}', [OrderController::class, 'adminShow']);
         Route::patch('orders/{order}', [OrderController::class, 'update']);
+
+        // In admin middleware group:
+        Route::get('orders/{order}', [OrderController::class, 'show']);               // order details
+        Route::get('orders/{order}/invoice', [OrderController::class, 'generateInvoice']); // PDF
+
+        // Reports
+        Route::get('reports/sales', [ReportController::class, 'sales']);
+        Route::get('reports/products', [ReportController::class, 'products']);
+        Route::get('reports/customers', [ReportController::class, 'customers']);
+        Route::get('reports/orders', [ReportController::class, 'orders']);
     });
 
     // -------------------------------------------------------

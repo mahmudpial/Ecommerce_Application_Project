@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\OrderResource;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class OrderController extends Controller
 {
@@ -31,7 +32,7 @@ class OrderController extends Controller
             })
             ->first();
 
-        if (! $record) {
+        if (!$record) {
             return response()->json(['message' => 'Order not found'], 404);
         }
 
@@ -92,5 +93,12 @@ class OrderController extends Controller
             'message' => 'Order status updated successfully',
             'order' => new OrderResource($order->fresh()->load(['user', 'items.product'])),
         ]);
+    }
+    // For admin to generate PDF invoice
+    public function generateInvoice(Order $order)
+    {
+        $order->load(['user', 'orderItems.product']);
+        $pdf = Pdf::loadView('pdf.invoice', ['order' => $order]);
+        return $pdf->download("invoice-{$order->id}.pdf");
     }
 }
