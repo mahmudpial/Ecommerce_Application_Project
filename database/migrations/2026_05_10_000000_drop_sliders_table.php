@@ -10,6 +10,14 @@ return new class extends Migration {
      */
     public function up(): void
     {
+        Schema::dropIfExists('sliders');
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
         Schema::create('sliders', function (Blueprint $table) {
             $table->id();
             $table->string('title')->nullable();
@@ -21,13 +29,5 @@ return new class extends Migration {
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('sliders');
     }
 };

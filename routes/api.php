@@ -129,6 +129,8 @@ Route::prefix('v1')->group(function () {
         Route::get('users', [UserController::class, 'index']);
         // Admin order management
         Route::get('orders', [OrderController::class, 'adminIndex']);
+        Route::get('orders/{order}', [OrderController::class, 'adminShow']);
+        Route::patch('orders/{order}', [OrderController::class, 'update']);
     });
 
     // -------------------------------------------------------

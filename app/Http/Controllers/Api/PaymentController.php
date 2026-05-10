@@ -25,6 +25,7 @@ class PaymentController extends Controller
             'customer_phone' => 'required|string',
             'delivery_method' => 'nullable|string|in:standard,express,same_day',
             'payment_method' => 'nullable|string|in:cod,bkash,card',
+            'promo_code' => 'nullable|string|max:50',
             'items' => 'nullable|array',
             'items.*.product_id' => 'nullable|integer',
             'items.*.id' => 'nullable|integer',
@@ -45,7 +46,8 @@ class PaymentController extends Controller
 
         $subtotal = (float) $lineItems->sum(fn ($item) => $item['unit_price'] * $item['quantity']);
         $shippingCost = $this->resolveShippingCost($request->input('delivery_method', 'standard'), $subtotal);
-        $discount = 0;
+        $promo = $this->resolvePromoDiscount($request->input('promo_code'), $subtotal);
+        $discount = $promo['discount'];
         $total = $subtotal + $shippingCost - $discount;
         $paymentMethod = $request->input('payment_method', 'cod');
 
@@ -80,6 +82,8 @@ class PaymentController extends Controller
         return response()->json([
             'message' => 'Order created successfully',
             'order' => new OrderResource($order->load(['items.product'])),
+            'promo_code' => $promo['code'],
+            'discount' => $discount,
         ], 201);
     }
 
@@ -282,5 +286,54 @@ class PaymentController extends Controller
             'same_day' => 350,
             default => $subtotal >= 3000 ? 0 : 120,
         };
+    }
+
+    private function resolvePromoDiscount(?string $promoCode, float $subtotal): array
+    {
+        $code = strtoupper(trim((string) $promoCode));
+
+        if ($code === '') {
+            return ['code' => null, 'discount' => 0];
+        }
+
+        $promos = [
+            'SAVE10' => [
+                'type' => 'percent',
+                'value' => 10,
+                'min_subtotal' => 1000,
+            ],
+            'FLAT200' => [
+                'type' => 'flat',
+                'value' => 200,
+                'min_subtotal' => 2000,
+            ],
+            'SUPER15' => [
+                'type' => 'percent',
+                'value' => 15,
+                'min_subtotal' => 5000,
+            ],
+        ];
+
+        if (! isset($promos[$code])) {
+            throw ValidationException::withMessages([
+                'promo_code' => ['Invalid promo code.'],
+            ]);
+        }
+
+        $promo = $promos[$code];
+        if ($subtotal < (float) $promo['min_subtotal']) {
+            throw ValidationException::withMessages([
+                'promo_code' => ['This promo code does not meet the minimum order amount.'],
+            ]);
+        }
+
+        $discount = $promo['type'] === 'percent'
+            ? ($subtotal * (float) $promo['value']) / 100
+            : (float) $promo['value'];
+
+        return [
+            'code' => $code,
+            'discount' => min($subtotal, max(0, $discount)),
+        ];
     }
 }

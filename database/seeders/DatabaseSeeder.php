@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Slider;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -56,9 +55,6 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Create sliders
-        Slider::create(['title' => 'Summer Sale', 'subtitle' => 'Up to 50% off', 'image' => 'slider1.jpg', 'order' => 1, 'is_active' => true]);
-        Slider::create(['title' => 'New Arrivals', 'subtitle' => 'Latest products', 'image' => 'slider2.jpg', 'order' => 2, 'is_active' => true]);
     }
 
 }
