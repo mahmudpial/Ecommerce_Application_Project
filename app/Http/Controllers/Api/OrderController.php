@@ -97,8 +97,24 @@ class OrderController extends Controller
     // For admin to generate PDF invoice
     public function generateInvoice(Order $order)
     {
-        $order->load(['user', 'orderItems.product']);
-        $pdf = Pdf::loadView('pdf.invoice', ['order' => $order]);
+        $order->load(['user', 'items.product']);
+
+        $subtotal = $order->items->sum(function ($item) {
+            return $item->price * $item->quantity;
+        });
+        $shippingCost = $order->shipping_cost ?? 0;
+        $discount = $order->discount ?? 0;
+        $tax = $order->tax ?? 0;
+        $total = $subtotal + $shippingCost + $tax - $discount;
+
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'order' => $order,
+            'subtotal' => $subtotal,
+            'shipping_cost' => $shippingCost,
+            'discount' => $discount,
+            'tax' => $tax,
+            'total' => $total,
+        ]);
         return $pdf->download("invoice-{$order->id}.pdf");
     }
 }
